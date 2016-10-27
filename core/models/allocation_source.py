@@ -4,10 +4,16 @@ from django.utils import timezone
 from threepio import logger
 from pprint import pprint
 
+# class RenewalStrategy(models.Model):
+#     name = models.CharField(max_length=255)
+
 class AllocationSource(models.Model):
     name = models.CharField(max_length=255)
     source_id = models.CharField(max_length=255)
     compute_allowed = models.IntegerField()
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField(null=True, blank=True)
+    renewal_strategy = models.CharField(max_length=255, null=True)
 
     @classmethod
     def for_user(cls, user):
@@ -111,9 +117,11 @@ class InstanceAllocationSourceSnapshot(models.Model):
 class AllocationSourceSnapshot(models.Model):
     allocation_source = models.OneToOneField(AllocationSource, related_name="snapshot")
     updated = models.DateTimeField(auto_now=True)
+    last_renewed = models.DateTimeField(default=timezone.now)
     # all fields are stored in DecimalField to allow for partial hour calculation
     global_burn_rate = models.DecimalField(max_digits=19, decimal_places=3)
     compute_used = models.DecimalField(max_digits=19, decimal_places=3)
+    compute_allowed = models.DecimalField(max_digits=19, decimal_places=3, default=0)
 
     def __unicode__(self):
         return "%s (Used:%s, Burn Rate:%s Updated on:%s)" %\
