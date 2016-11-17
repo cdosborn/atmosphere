@@ -7,6 +7,7 @@ djangorestframework-jsonp==1.0.0
 djangorestframework-xml==1.0.1
 djangorestframework-yaml==1.0.2
 django-filter==0.13.0
+django-behave==0.1.5
 django-redis-cache==0.13.0
 redis==2.10.3
 eventlet==0.18.4
@@ -38,3 +39,4 @@ django-iplant-auth==0.1.19
 threepio==0.2.0
 rtwo==0.4.9
 subspace==0.2.5
+behave==1.2.5
