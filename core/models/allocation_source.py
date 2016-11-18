@@ -13,7 +13,7 @@ class AllocationSource(models.Model):
     compute_allowed = models.IntegerField()
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True, blank=True)
-    renewal_strategy = models.CharField(max_length=255, null=True)
+    renewal_strategy = models.CharField(max_length=255)
 
     @classmethod
     def for_user(cls, user):
