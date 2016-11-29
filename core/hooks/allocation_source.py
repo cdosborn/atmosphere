@@ -311,7 +311,7 @@ def listen_for_allocation_source_created(sender, instance, created, **kwargs):
     EventPayload - {
         "source_id": "2439b15a-293a-4c11-b447-bf349f16ed2e",
         "name": "TestAllocationSource",
-        "compute_used": 50000,
+        "compute_allowed": 50000,
         "renewal_strategy": "default"
     }
 
@@ -340,7 +340,8 @@ def listen_for_allocation_source_created(sender, instance, created, **kwargs):
 
     allocation_source_snapshot = AllocationSourceSnapshot(allocation_source=allocation_source,
                                           global_burn_rate = 0,
-                                         compute_used=0.0
+                                         compute_used=0.0,
+                                        compute_allowed=allocation_compute_allowed
                                          )
     allocation_source_snapshot.save()
 
