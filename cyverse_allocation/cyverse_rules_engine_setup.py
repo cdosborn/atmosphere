@@ -136,7 +136,6 @@ class CyverseTestIncreaseAllocationsActions(BaseActions):
         if not source_snapshot:
             raise Exception('Allocation Source %s cannot be renewed because no snapshot is available' % (
             self.allocation_source.name))
-        import ipdb; ipdb.set_trace()
         source_snapshot = source_snapshot.last()
         remaining_compute = 0 if source_snapshot.compute_allowed - source_snapshot.compute_used < 0 else source_snapshot.compute_allowed - source_snapshot.compute_used
         source_snapshot.compute_used = 0
