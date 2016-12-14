@@ -36,7 +36,6 @@ class AllocationSourceCommandViewSet(AuthViewSet):
         return Response(serializer.data)
 
     def create(self, request):
-        import ipdb; ipdb.set_trace()
         request_user = request.user
         request_data = request.data
 
