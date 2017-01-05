@@ -1,0 +1,71 @@
+# Note: for apache2 and celery, use the packaged version of logrotate
+/opt/dev/atmosphere/logs/atmosphere.log {
+    su www-data www-data
+    daily
+    rotate 10
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/libcloud.log {
+    su www-data www-data
+    daily
+    rotate 10
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/atmosphere_api.log {
+    su www-data www-data
+    daily
+    rotate 4
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/atmosphere_auth.log {
+    su www-data www-data
+    daily
+    rotate 4
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/atmosphere_deploy.log {
+    su www-data www-data
+    daily
+    rotate 4
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/atmosphere_email.log {
+    su www-data www-data
+    daily
+    rotate 2
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+/opt/dev/atmosphere/logs/atmosphere_status.log {
+    su www-data www-data
+    daily
+    rotate 4
+    missingok
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}

@@ -1,0 +1,26 @@
+Username : {{ username }} ({{ name|safe }})
+
+Feedback : {{ feedback|safe }}
+
+Provider : {{ provider }}
+
+User-interface : {{ ui }}
+
+Server : {{ server }}
+
+Instances :
+{% for i in instances %}
+    Name : {{ i.name|safe }}
+    UUID : {{ i.provider_alias }}
+    Image : {{ i.provider_machine.identifier }}
+    IP : {{ i.ip_address }}
+{% endfor %}
+
+Volumes :
+{% for v in volumes %}
+    Name : {{ v.name|safe }}
+    UUID : {{ v.identifier }}
+    Size : {{ v.size }}
+{% endfor %}
+
+{% include "fingerprint.html" %}

@@ -1,0 +1,413 @@
+"""
+Settings specific to the local deploy.
+"""
+import os
+import sys
+
+# This is used by dependencies (ex: chromogenic)
+# without exposing 'secret' settings in Debug mode.
+from atmosphere.settings import secrets
+SECRETS_MODULE = secrets
+
+globals().update(vars(sys.modules['atmosphere.settings']))
+
+# Debug Mode
+DEBUG = {{ DJANGO_DEBUG }}
+SEND_EMAILS = {{ not DJANGO_DEBUG }}
+
+{% if DJANGO_TEMPLATE_DEBUG -%}
+template_backends = filter(lambda t:
+    t['BACKEND'] == 'django.template.backends.django.DjangoTemplates',
+    TEMPLATES)
+for backend in template_backends:
+    if 'debug' in backend['OPTIONS']:
+        backend['OPTIONS']['debug'] = {{ DJANGO_TEMPLATE_DEBUG }}
+{%- endif %}
+
+{% if ENFORCING %}
+ENFORCING = True
+{% else %}
+ENFORCING = False
+{% endif %}
+
+#Cloud-Operator specific information
+{%- if SITE_NAME %}
+SITE_NAME = '{{ SITE_NAME }}'
+SITE_TITLE = '{{ SITE_NAME }}'
+{%- else %}
+SITE_NAME = 'Atmosphere'
+SITE_TITLE = 'Atmosphere'
+{%- endif %}
+{%- if ORG_NAME %}
+ORG_NAME = '{{ ORG_NAME }}'
+{%- endif %}
+
+{%- if TIME_ZONE %}
+TIME_ZONE = '{{ TIME_ZONE }}'
+CELERY_TIMEZONE = TIME_ZONE
+{%- endif %}
+
+DEFAULT_EMAIL_DOMAIN = '{{ DEFAULT_EMAIL_DOMAIN }}'
+{% if ADMINS_EMAIL_TUPLE %}
+ADMINS = [
+# The first admin will AUTHOR all e-mails.
+# These ADMINS override values set in __init__.py
+{%- for email_tuple in ADMINS_EMAIL_TUPLE %}
+  {{ email_tuple }},
+{%- endfor %}
+]
+{% endif %}
+
+
+{%- if SERVER_EMAIL %}
+# This email will be used as the FROM: address for emails to the ADMINS
+SERVER_EMAIL="{{ SERVER_EMAIL }}"
+{%- endif %}
+# Required to send RequestTracker emails
+{% if ATMO_SUPPORT_EMAIL_TUPLE %}
+ATMO_SUPPORT = [
+# The first admin will AUTHOR all e-mails.
+# These ATMO_SUPPORT override values set in __init__.py
+{%- for email_tuple in ATMO_SUPPORT_EMAIL_TUPLE %}
+  {{ email_tuple }},
+{%- endfor %}
+]
+{%- else %}
+ATMO_SUPPORT = ADMINS
+{% endif %}
+
+{% if MAINTENANCE_EXEMPT_USERNAMES %}
+MAINTENANCE_EXEMPT_USERNAMES = {{ MAINTENANCE_EXEMPT_USERNAMES }}
+{% else %}
+MAINTENANCE_EXEMPT_USERNAMES = []
+{% endif %}
+
+ATMO_DAEMON = (("Atmosphere Daemon", "atmo-alerts@iplantcollaborative.org"),)
+
+# Django uses this one..
+MANAGERS = ADMINS
+
+{%- if SUPPORT_EMAIL %}
+SUPPORT_EMAIL = '{{ SUPPORT_EMAIL }}'
+{%- else %}
+SUPPORT_EMAIL = ADMINS[0][1]  # First email in ADMINS
+{%- endif %}
+
+{%- if SUPPORT_EMAIL_SIGNATURE %}
+SUPPORT_EMAIL_SIGNATURE = '{{ SUPPORT_EMAIL_SIGNATURE }}'
+{%- else %}
+SUPPORT_EMAIL_SIGNATURE = 'Atmosphere Support Team'
+{%- endif %}
+
+# These support links will be made available through Troposphere.
+{%- if SUPPORT_LINKS %}
+SUPPORT_LINKS = {{ SUPPORT_LINKS }}
+{%- else %}
+SUPPORT_LINKS = {'getting_started': "https://link_to.wiki.org/Using+Instances", 'new_provider': "https://link_to.wiki.org/Changing+Providers", "faq": "https://link_to.wiki.org/Cloud_FAQ"}
+{%- endif %}
+
+REPLICATION_PROVIDER_LOCATION = '{{ REPLICATION_PROVIDER_LOCATION }}'
+{%- if MONTHLY_RESET_PROVIDER_LOCATIONS %}
+MONTHLY_RESET_PROVIDER_LOCATIONS = {{ MONTHLY_RESET_PROVIDER_LOCATIONS }}
+{%- else %}
+MONTHLY_RESET_PROVIDER_LOCATIONS = []
+{%- endif %}
+USER_EMAIL_LOOKUP_METHOD = '{{ USER_EMAIL_LOOKUP_METHOD }}'
+EMAIL_LOOKUP_METHOD = '{{ EMAIL_LOOKUP_METHOD }}'
+
+# Marked for deletion when BYOC is available to set "per-provider-defaults"
+# Values must be integers or None.
+{%- if DEFAULT_ALLOCATION_THRESHOLD and DEFAULT_ALLOCATION_DELTA %}
+DEFAULT_ALLOCATION_THRESHOLD = int({{ DEFAULT_ALLOCATION_THRESHOLD }})
+DEFAULT_ALLOCATION_DELTA = int({{ DEFAULT_ALLOCATION_DELTA }})
+{%- else %}
+DEFAULT_ALLOCATION_THRESHOLD = None
+DEFAULT_ALLOCATION_DELTA = None
+{%- endif %}
+
+# Value must be dict or None.
+{%- if DEFAULT_QUOTA %}
+DEFAULT_QUOTA = {{ DEFAULT_QUOTA }}
+{%- else %}
+DEFAULT_QUOTA = None
+{%- endif %}
+
+# Marked for deletion -- Use provider.cloud_config instead
+DEFAULT_KEYSTONE_ROLE = '{{ DEFAULT_KEYSTONE_ROLE }}'
+DEFAULT_IP_LOOKUP = '{{ DEFAULT_IP_LOOKUP }}'
+DEFAULT_PASSWORD_UPDATE = '{{ DEFAULT_PASSWORD_UPDATE }}'
+INSTANCE_HOSTNAMING_DOMAIN = '{{ INSTANCE_HOSTNAMING_DOMAIN }}'
+INSTANCE_HOSTNAMING_FORMAT = '{{ INSTANCE_HOSTNAMING_FORMAT }}'
+
+{%- if AUTO_CREATE_NEW_ACCOUNTS %}
+AUTO_CREATE_NEW_ACCOUNTS = True
+{%- else %}
+AUTO_CREATE_NEW_ACCOUNTS = False
+{%- endif %}
+{%- if CELERYBEAT_SCHEDULE %}
+#CELERYBEAT_SCHEDULE OVERRIDES:
+  {%- for task_key, schedule in CELERYBEAT_SCHEDULE.items() %}
+    {%- for task_opt, task_opt_value in schedule.items() %}
+CELERYBEAT_SCHEDULE["{{task_key}}"]["{{task_opt}}"] = {{task_opt_value}}
+    {%- endfor %}
+  {%- endfor %}
+{%- endif %}
+{% if USE_JETSTREAM_PLUGIN %}
+ALLOCATION_SOURCE_WARNINGS = [10, 25, 50, 75, 90]
+JETSTREAM_CELERYBEAT_SCHEDULE = {
+  "report_allocations_to_tas":{
+        "task":"report_allocations_to_tas",
+        "schedule" : timedelta(minutes=60),
+        "options" : {"expires": 30 * 60,"time_limit": 30 * 60}
+    },
+  "update_snapshot":{
+	"task":"update_snapshot",
+        "schedule":timedelta(minutes=30),
+	"options" : {"expires":20*60 , "time_limit":20*60}
+    },
+  "monitor_jetstream_allocation_sources":{
+	"task":"monitor_jetstream_allocation_sources",
+        # Every 15 minutes
+        "schedule": crontab(minute="*/15"),
+        "options" : {"expires": 10 * 60,"time_limit": 10 * 60}
+  }
+}
+CELERYBEAT_SCHEDULE.update(JETSTREAM_CELERYBEAT_SCHEDULE)
+{% endif %}
+# Logging
+LOGGING_LEVEL = {{ LOGGING_LEVEL }}
+# Logging level for dependencies.
+DEP_LOGGING_LEVEL = {{ LOGGING_DEP_LEVEL }}
+
+
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(
+    os.path.dirname(__file__), '../..'))
+
+SERVER_URL = '{{ DJANGO_SERVER_URL }}'
+
+
+DATABASES = {
+    'default': {
+        'NAME': '{{ DATABASE_NAME }}',
+        'ENGINE': '{{ DATABASE_ENGINE }}',
+        'USER': '{{ DATABASE_USER }}',
+        'CONN_MAX_AGE': {{ DATABASE_CONN_MAX_AGE }},
+        'PASSWORD': '{{ DATABASE_PASSWORD }}',
+        'HOST': '{{ DATABASE_HOST }}',
+        'PORT': {{ DATABASE_PORT }},
+        'TEST': {
+            'SERIALIZE': False
+        }
+    },
+}
+
+
+# Prevents warnings
+ALLOWED_HOSTS = [SERVER_URL.replace('https://', '')]
+CSRF_TRUSTED_ORIGINS = ALLOWED_HOSTS
+
+
+# Atmosphere Keypair/Deployment Configs
+ATMOSPHERE_PRIVATE_KEYFILE = os.path.join(PROJECT_ROOT, 'extras/ssh/id_rsa')
+ATMOSPHERE_KEYPAIR_FILE = os.path.join(PROJECT_ROOT, 'extras/ssh/id_rsa.pub')
+ATMOSPHERE_KEYPAIR_NAME = '{{ DEPLOYMENT_KEYPAIR_NAME }}'
+
+
+# Atmosphere App Configs
+INSTANCE_SERVICE_URL = SERVER_URL + REDIRECT_URL + '/api/v1/notification'
+INSTANCE_SERVICE_URL.replace('https', 'http')
+API_SERVER_URL = SERVER_URL + REDIRECT_URL + '/resources/v1'
+AUTH_SERVER_URL = SERVER_URL + REDIRECT_URL + '/auth'
+DEPLOY_SERVER_URL = SERVER_URL.replace('https', 'http')
+
+
+# Django-Celery Development settings
+# CELERY_EAGER_PROPAGATES_EXCEPTIONS = True  # Issue #75
+{% if USE_ALLOCATION_SOURCE %}
+USE_ALLOCATION_SOURCE = True
+{% endif %}
+
+
+# Configure authentication plugin
+AUTHENTICATION = {
+    #GLOBAL
+    "APP_NAME": SITE_TITLE,
+    "SITE_NAME": ORG_NAME,
+    "SERVER_URL": SERVER_URL,
+    "TOKEN_EXPIRY_TIME": timedelta(days={{ TOKEN_EXPIRY_TIME_DAYS }}),
+    "SELF_SIGNED_CERT": {{ SELF_SIGNED_CERT }},
+    "LOGOUT_REDIRECT_URL": '{{ LOGOUT_REDIRECT_URL }}',
+
+    #CAS
+    "CAS_SERVER": '{{ CAS_SERVER }}',
+    "CAS_AUTH_PREFIX": '{{ CAS_AUTH_PREFIX }}',
+
+    #CAS+OAuth
+    "OAUTH_CLIENT_KEY": '{{ OAUTH_CLIENT_KEY }}',
+    "OAUTH_CLIENT_SECRET": '{{ OAUTH_CLIENT_SECRET }}',
+    "OAUTH_CLIENT_CALLBACK":  SERVER_URL + '/oauth2.0/callbackAuthorize',
+    "OAUTH_ISSUE_USER": '{{ OAUTH_ISSUE_USER}}',
+
+    #LDAP
+    "LDAP_SERVER": '{{ LDAP_SERVER }}',
+    "LDAP_SERVER_DN": '{{ LDAP_SERVER_DN }}',
+    {% if JWT_INSTALL %}
+    # WSO2 + JWT
+    "JWT_SP_PUBLIC_KEY_FILE" :'{{ JWT_PUBLIC_KEY }}',
+    "JWT_CLIENT_KEY" :'{{ JWT_CLIENT_KEY }}',
+    "JWT_CLIENT_SECRET" :'{{ JWT_CLIENT_SECRET }}',
+    {% endif %}
+
+
+    #GLOBUS
+    "GLOBUS_OAUTH_ID": '{{ GLOBUS_OAUTH_ID }}',
+    "GLOBUS_OAUTH_SECRET": '{{ GLOBUS_OAUTH_SECRET }}',
+    "GLOBUS_OAUTH_CREDENTIALS_SCOPE": '{{ GLOBUS_OAUTH_CREDENTIALS_SCOPE }}',
+    "GLOBUS_OAUTH_ATMOSPHERE_SCOPE": '{{ GLOBUS_OAUTH_ATMOSPHERE_SCOPE }}',
+    "GLOBUS_TOKEN_URL": '{{ GLOBUS_TOKEN_URL }}',
+    "GLOBUS_TOKENINFO_URL": '{{ GLOBUS_TOKENINFO_URL }}',
+    "GLOBUS_AUTH_URL": '{{ GLOBUS_AUTH_URL }}',
+}
+
+{% if AUTH_ENABLE_MOCK %}
+ALWAYS_AUTH_USER = "{{ AUTH_MOCK_USER }}"
+{% else %}
+# MOCK - Uncomment these lines to allow one-user-only access. Useful for debug/development
+# ALWAYS_AUTH_USER = "test_user"
+{% endif %}
+{% if AUTH_USE_OVERRIDE %}
+AUTHENTICATION_BACKENDS = (
+    {% if AUTH_ENABLE_MOCK %}
+    # Use MockLoginBackend first!
+    'django_cyverse_auth.authBackends.MockLoginBackend',
+    {% else %}
+    # MOCK - Uncomment these lines to allow one-user-only access. Useful for debug/development
+    # 'django_cyverse_auth.authBackends.MockLoginBackend',
+    # MOCK - Required to login to 'admin' if the *ONLY* backend is MockLoginBackend.
+    # 'django.contrib.auth.backends.ModelBackend',
+    {% endif %}
+    # Use existing AuthTokens as a login backend (Emulation via API)
+    'django_cyverse_auth.authBackends.AuthTokenLoginBackend',
+    {% if AUTH_ENABLE_GLOBUS %}
+    # For Web-Access
+    'django_cyverse_auth.authBackends.GlobusOAuthLoginBackend',
+    # Required to login to 'admin' if the *ONLY* backend is GlobusLoginBackend
+    'django.contrib.auth.backends.ModelBackend',
+    {% endif %}
+    {% if AUTH_ENABLE_CAS %}
+    # For Web-Access
+    'django_cyverse_auth.authBackends.CASLoginBackend',
+    {% endif %}
+    {% if AUTH_ENABLE_LDAP %}
+    # For Service-Access
+    'django_cyverse_auth.authBackends.LDAPLoginBackend',
+    {% endif %}
+)
+# UPDATE REST_FRAMEWORK
+REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
+    'django_cyverse_auth.token.TokenAuthentication',  # Generic Tokens
+    'rest_framework.authentication.SessionAuthentication',  # Session
+    {% if AUTH_ENABLE_GLOBUS %}
+    'django_cyverse_auth.token.GlobusOAuthTokenAuthentication',  # Globus
+    {% endif %}
+    {% if AUTH_ENABLE_JWT %}
+    'django_cyverse_auth.token.JWTTokenAuthentication',  # JWT
+    {% endif %}
+    {% if AUTH_ENABLE_CAS %}
+    'django_cyverse_auth.token.OAuthTokenAuthentication',  # CAS
+    {% endif %}
+)
+{% endif %}
+# CASLIB
+SERVER_URL = SERVER_URL + REDIRECT_URL
+SERVICE_URL = SERVER_URL + '/CAS_serviceValidater?sendback=' + REDIRECT_URL + '/application/'
+PROXY_URL = SERVER_URL + '/CAS_proxyUrl'
+PROXY_CALLBACK_URL = SERVER_URL + '/CAS_proxyCallback'
+
+
+# Atmosphere Ansible Deploy
+ANSIBLE_ROOT = '{{ ANSIBLE_ROOT }}'
+# The root directory for the ansible deploy project.
+# If this is emptry str then ansible deploys will not
+# run and will warn that ansible is no configured.
+ANSIBLE_CONFIG_FILE = os.path.join(ANSIBLE_ROOT, 'ansible/ansible.cfg')
+ANSIBLE_HOST_FILE = os.path.join(ANSIBLE_ROOT, 'ansible/hosts')
+ANSIBLE_GROUP_VARS_DIR = os.path.join(ANSIBLE_ROOT, 'ansible/group_vars')
+ANSIBLE_PLAYBOOKS_DIR = os.path.join(ANSIBLE_ROOT, 'ansible/playbooks')
+ANSIBLE_ROLES_PATH = os.path.join(ANSIBLE_ROOT, 'ansible/roles')
+
+os.environ["ANSIBLE_CONFIG"] = ANSIBLE_CONFIG_FILE 
+
+# LOGSTASH
+{%- if LOGSTASH_HOST and LOGSTASH_PORT %}
+LOGSTASH_HOST = '{{ LOGSTASH_HOST }}'
+LOGSTASH_PORT = {{ LOGSTASH_PORT }}
+{%- else %}
+LOGSTASH_HOST = ''
+LOGSTASH_PORT = -1
+{%- endif %}
+try:
+    import logstash
+    import threepio
+    has_logstash = True
+except ImportError:
+    has_logstash = False
+
+
+METRIC_SERVER = '{{ METRIC_SERVER }}'
+
+{% if LOG_LIBCLOUD %}
+os.environ["LIBCLOUD_DEBUG"] = os.path.join(PROJECT_ROOT, "logs/libcloud.log")
+os.environ["LIBCLOUD_DEBUG_PRETTY_PRINT_RESPONSE"] = "True"
+{% endif %}
+
+
+if has_logstash and LOGSTASH_HOST:
+    fh = logstash.TCPLogstashHandler(LOGSTASH_HOST, LOGSTASH_PORT,
+                                     message_type='atmo-deploy', version=1)
+    threepio.deploy_logger.addHandler(fh)
+
+{% if TESTING %}
+{% include "atmosphere/settings/testing.j2" %}
+{% endif %}
+{% if SSLSERVER %}
+# Include runsslserver
+INSTALLED_APPS += (
+    'sslserver',
+)
+{% endif %}
+
+{% if USE_JETSTREAM_PLUGIN %}
+INSTALLED_APPS += (
+    'jetstream',
+)
+TACC_API_USER = '{{ TACC_API_USER }}'
+TACC_API_PASS = '{{ TACC_API_PASS }}'
+TACC_API_URL = '{{ TACC_API_URL }}'
+{% else %}
+# Uncomment and add values to TACC_API if you intend to use the jetstream plugin
+# INSTALLED_APPS += (
+#     'jetstream',
+# )
+TACC_API_USER = ''
+TACC_API_PASS = ''
+TACC_API_URL = ''
+{% endif %}
+# Validation Plugins:
+# These plugins will be checked, in order, until one passes
+# If all validation plugins fail, user will be "kicked out" of the API.
+{%- if VALIDATION_PLUGINS %}
+VALIDATION_PLUGINS = [
+{%- for plugin in VALIDATION_PLUGINS %}
+  "{{ plugin }}",
+{%- endfor %}
+]
+{%- else %}
+# NOTE: No VALIDATION_PLUGINS were present during configure.
+VALIDATION_PLUGINS = [
+    #'jetstream.plugins.auth.validation.XsedeProjectRequired',
+    #'atmosphere.plugins.auth.validation.LDAPGroupRequired',
+    'atmosphere.plugins.auth.validation.AlwaysAllow',
+]
+{%- endif %}
