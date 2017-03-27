@@ -237,6 +237,37 @@ class InstanceViewSet(MultipleFieldLookup, AuthModelViewSet):
             raise Exception(error_map)
         return
 
+    # Caveat: update only accepts updates for the allocation_source field
+    def update(self, request, pk=None, partial=False):
+        if not pk:
+            return Response("Missing instance primary key",
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data = request.data
+        instance = Instance.objects.get(id=pk)
+
+        # The portion of the instance to serialize/update
+        partial_instance = {}
+
+        if data.has_key("allocation_source") and \
+            data["allocation_source"].has_key("id"):
+            allocation_id = data["allocation_source"]["id"]
+            source = AllocationSource.objects.get(id=allocation_id)
+            instance.change_allocation_source(source)
+            partial_instance["allocation_source"] = data["allocation_source"]
+
+        serialized_instance = InstanceSerializer(
+                instance, context={'request': self.request},
+                data=partial_instance, partial=True)
+
+        if not serialized_instance.is_valid():
+            return Response(serialized_instance.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serialized_instance.data,
+                    status=status.HTTP_200_OK)
+
+
     def create(self, request):
         user = request.user
         data = request.data
