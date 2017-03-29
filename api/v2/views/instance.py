@@ -253,7 +253,7 @@ class InstanceViewSet(MultipleFieldLookup, AuthModelViewSet):
             data["allocation_source"].has_key("id"):
             allocation_id = data["allocation_source"]["id"]
             source = AllocationSource.objects.get(id=allocation_id)
-            instance.change_allocation_source(source)
+            instance.allocation_source = source
             partial_instance["allocation_source"] = data["allocation_source"]
 
         serialized_instance = InstanceSerializer(
@@ -293,6 +293,7 @@ class InstanceViewSet(MultipleFieldLookup, AuthModelViewSet):
             identity = Identity.objects.get(uuid=identity_uuid)
             if settings.USE_ALLOCATION_SOURCE:
                 allocation_source = AllocationSource.objects.get(source_id=allocation_source_id)
+                instance.allocation_source = allocation_source
             core_instance = launch_instance(
                 user, identity_uuid, size_alias, source_alias, name, deploy,
                 **extra)
@@ -308,8 +309,6 @@ class InstanceViewSet(MultipleFieldLookup, AuthModelViewSet):
             instance.projects.add(project)
             if boot_scripts:
                 _save_scripts_to_instance(instance, boot_scripts)
-            if settings.USE_ALLOCATION_SOURCE:
-                instance.change_allocation_source(allocation_source)
             return Response(
                 serialized_instance.data, status=status.HTTP_201_CREATED)
         except UnderThresholdError as ute:

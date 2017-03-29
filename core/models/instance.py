@@ -490,18 +490,17 @@ class Instance(models.Model):
         snapshot = Snapshot.objects.filter(instance=self).first()
         return snapshot.allocation_source if snapshot else None
 
-    def change_allocation_source(self, allocation_source, user=None):
+    @allocation_source.setter
+    def allocation_source(self, allocation_source):
         """
         Call this method when you want to issue a 'change_allocation_source' event to the database.
         """
+        if not allocation_source:
+            raise Exception("Allocation source must not be null")
         if not settings.USE_ALLOCATION_SOURCE:
             return
         from core.models.event_table import EventTable
-        if not user:
-            user = self.created_by
-        #FIXME: comment out this line for AllocationSource
-        if not allocation_source:
-            raise Exception("Allocation source must not be null")
+        username = self.created_by.username
         payload = {
                 'allocation_source_id': str(allocation_source.uuid),
                 'instance_id': self.provider_alias
@@ -509,7 +508,7 @@ class Instance(models.Model):
         return EventTable.create_event(
             "instance_allocation_source_changed",
             payload,
-            user.username)
+            username)
 
     def json(self):
         return {

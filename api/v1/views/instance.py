@@ -173,11 +173,10 @@ class InstanceList(AuthAPIView):
         boot_scripts = data.pop("scripts", [])
         try:
             logger.debug(data)
-            if not settings.USE_ALLOCATION_SOURCE:
-                allocation_source = None
-            else:
+            if settings.USE_ALLOCATION_SOURCE:
                 allocation_source = AllocationSource.objects.get(
                     source_id=allocation_source_id)
+                instance.allocation_source = allocation_source
             core_instance = launch_instance(
                 user, identity_uuid,
                 size_alias, machine_alias,
@@ -211,7 +210,6 @@ class InstanceList(AuthAPIView):
             instance = serializer.save()
             if boot_scripts:
                 _save_scripts_to_instance(instance, boot_scripts)
-            instance.change_allocation_source(allocation_source)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors,
