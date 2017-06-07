@@ -473,6 +473,13 @@ EXPIRATION_PLUGINS = [
 ]
 {%- endif %}
 
+# Support for Guacamole
+GUACAMOLE_ENABLED = {{ GUACAMOLE_ENABLED }}
+GUACAMOLE = {
+    'SECRET_KEY': '{{ GUACAMOLE_SECRET_KEY }}',
+    'SERVER_URL': '{{ GUACAMOLE_SERVER_URL }}'
+}
+
 # Support for Web Desktop
 WEB_DESKTOP_INCLUDE_LINK = {{ WEB_DESKTOP_INCLUDE_LINK }}
 
