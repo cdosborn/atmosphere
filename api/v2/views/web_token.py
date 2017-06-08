@@ -2,34 +2,20 @@ import logging
 import uuid
 import json
 import time
-import uuid
 import hmac
 import hashlib
 import base64
 import requests
-import logging
-
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect, UnreadablePostError
-
-from django.conf import settings
-from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect
-from django.http.request import UnreadablePostError
-from django.shortcuts import render, redirect, render_to_response
-from django.template import RequestContext
-
-from itsdangerous import Signer, URLSafeTimedSerializer
-
+from django.http import HttpResponse
+from itsdangerous import URLSafeTimedSerializer
 from rest_framework import status
-from rest_framework import exceptions as rest_exceptions
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework import authentication, permissions, mixins
+
 from core.models import Instance
 from core.query import only_current
-
 from api.v2.exceptions import failure_response
 
 logger = logging.getLogger(__name__)
