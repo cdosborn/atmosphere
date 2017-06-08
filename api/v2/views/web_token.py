@@ -37,7 +37,6 @@ class WebTokenView(RetrieveAPIView):
         """
         Signs a redirect to transparent proxy for web desktop view.
         """
-        template_params = {}
         if not request.user.is_authenticated():
             logger.info("not authenticated: \nrequest:\n %s" % request)
             raise PermissionDenied
