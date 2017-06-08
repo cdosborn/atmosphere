@@ -31,12 +31,10 @@ class WebTokenView(RetrieveAPIView):
         return qs.filter(only_current())
 
     def retrieve(self, request, pk=None):
-        return self.retrieve_web_token(request, pk)
-
-    def retrieve_web_token(self, request, instance_id):
         """
-        Signs a redirect to transparent proxy for web desktop view.
+        Retrieve a signed token for a web desktop view.
         """
+        instance_id = pk
         if not request.user.is_authenticated():
             logger.info("not authenticated: \nrequest:\n %s" % request)
             raise PermissionDenied
