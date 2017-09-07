@@ -1,14 +1,13 @@
 #!/bin/sh -e
 #
 # ============================================
-#  celeryd - Starts the Celery worker daemon.
+#  atmosphre celeryd - Starts the Celery worker daemon.
 # ============================================
 #
-# :Usage: /etc/init.d/celeryd {start|stop|force-reload|restart|try-restart|status}
+# :Usage: /etc/init.d/celeryd {start|stop|status|restart}"
 # :Configuration file: /etc/default/celeryd
 #
 # See http://docs.celeryproject.org/en/latest/tutorials/daemonizing.html#generic-init-scripts
-
 
 ### BEGIN INIT INFO
 # Provides:          celeryd
@@ -16,455 +15,182 @@
 # Required-Stop:     $network $local_fs $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: celery task worker daemon
+# Short-Description: atmosphere celery task worker daemon
 ### END INIT INFO
-#
-#
-# To implement separate init scripts, copy this script and give it a different
-# name:
-# I.e., if my new application, "little-worker" needs an init, I
-# should just use:
-#
-#   cp /etc/init.d/celeryd /etc/init.d/little-worker
-#
-# You can then configure this by manipulating /etc/default/little-worker.
-#
-VERSION=10.0
-echo "celery init v${VERSION}."
+
+# Init script must be run as root
 if [ $(id -u) -ne 0 ]; then
     echo "Error: This program can only be used by the root user."
-    echo "       Unprivileged users must use the 'celery multi' utility, "
-    echo "       or 'celery worker --detach'."
     exit 1
 fi
 
+# App instance to use
+CELERY_APP="atmosphere"
 
-# Can be a runlevel symlink (e.g. S02celeryd)
-if [ -L "$0" ]; then
-    #SCRIPT_FILE=$(readlink "$0")
-    SCRIPT_FILE=$(basename "$0")
-else
-    SCRIPT_FILE="$0"
-fi
-SCRIPT_NAME="$(basename "$SCRIPT_FILE")"
+# By default, Celery assumes the user and group of uwsgi (imaging is an exception)
+CELERYD_USER="www-data"
+CELERYD_GROUP="www-data"
 
-DEFAULT_USER="root"
-DEFAULT_PID_FILE="/var/run/celery/%n.pid"
-DEFAULT_LOG_FILE="/var/log/celery/%n.log"
-DEFAULT_LOG_LEVEL="INFO"
-DEFAULT_NODES="celery"
-DEFAULT_CELERYD="-m celery worker --detach"
+# Set the log verbosity (DEBUG is another option)
+CELERYD_LOG_LEVEL="INFO"
 
-CELERY_DEFAULTS=${CELERY_DEFAULTS:-"/etc/default/${SCRIPT_NAME}"}
+# %n will be replaced with the nodename.
+CELERYD_LOG_FILE="/var/log/celery/%n.log"
+CELERYD_PID_FILE="/var/run/celery/%n.pid"
 
-# Make sure executable configuration script is owned by root
-_config_sanity() {
-    local path="$1"
-    local owner=$(ls -ld "$path" | awk '{print $3}')
-    local iwgrp=$(ls -ld "$path" | cut -b 6)
-    local iwoth=$(ls -ld "$path" | cut -b 9)
+# Where to chdir at start.
+# the module that defines your Celery app instance also
+# set a default value for DJANGO_SETTINGS_MODULE
+CELERYD_CHDIR="/opt/dev/atmosphere"
 
-    if [ "$(id -u $owner)" != "0" ]; then
-        echo "Error: Config script '$path' must be owned by root!"
-        echo
-        echo "Resolution:"
-        echo "Review the file carefully and make sure it has not been "
-        echo "modified with mailicious intent.  When sure the "
-        echo "script is safe to execute with superuser privileges "
-        echo "you can change ownership of the script:"
-        echo "    $ sudo chown root '$path'"
-        exit 1
-    fi
+# Max tasks per concurrent process
+CELERYD_MAX_TASKS_PER_CHILD="150"
 
-    #ATMOSPHERE_NOTE: This line is great if you deploy the file to /etc/default
-    # but it must be commented out if you plan on symlinking the file..
+# Environment location
+VIRTUALENV="/opt/env/atmo"
 
-    #if [ "$iwoth" != "-" ]; then  # S_IWOTH
-    #    echo "Error: Config script '$path' cannot be writable by others!"
-    #    echo
-    #    echo "Resolution:"
-    #    echo "Review the file carefully and make sure it has not been "
-    #    echo "modified with malicious intent.  When sure the "
-    #    echo "script is safe to execute with superuser privileges "
-    #    echo "you can change the scripts permissions:"
-    #    echo "    $ sudo chmod 640 '$path'"
-    #    exit 1
-    #fi
-    #if [ "$iwgrp" != "-" ]; then  # S_IWGRP
-    #    echo "Error: Config script '$path' cannot be writable by group!"
-    #    echo
-    #    echo "Resolution:"
-    #    echo "Review the file carefully and make sure it has not been "
-    #    echo "modified with malicious intent.  When sure the "
-    #    echo "script is safe to execute with superuser privileges "
-    #    echo "you can change the scripts permissions:"
-    #    echo "    $ sudo chmod 640 '$path'"
-    #    exit 1
-    #fi
+# Abs path to the 'celery' command
+CELERY_BIN="$VIRTUALENV/bin/celery"
+
+# Atmosphere Queues/Workers (unprivileged)
+CELERYD_NODES="\
+atmosphere-node_1 atmosphere-node_2 atmosphere-node_3 atmosphere-node_4 \
+atmosphere-fast_1 atmosphere-fast_2 \
+atmosphere-deploy_1 atmosphere-deploy_2 atmosphere-deploy_3 atmosphere-deploy_4 \
+atmosphere-deploy_5 atmosphere-deploy_6 atmosphere-deploy_7 \
+celery_periodic \
+email"
+
+CELERYD_WORKER_OPTS="\
+-Q:atmosphere-node_1 default -c:atmosphere-node_1 5 -O:atmosphere-node_1 fair \
+-Q:atmosphere-node_2 default -c:atmosphere-node_2 5 -O:atmosphere-node_2 fair \
+-Q:atmosphere-node_3 default -c:atmosphere-node_3 5 -O:atmosphere-node_3 fair \
+-Q:atmosphere-node_4 default -c:atmosphere-node_4 5 -O:atmosphere-node_4 fair \
+-Q:atmosphere-fast_1 fast_deploy -c:atmosphere-fast_1 5 -O:atmosphere-fast_1 fair \
+-Q:atmosphere-fast_2 fast_deploy -c:atmosphere-fast_2 5 -O:atmosphere-fast_2 fair \
+-Q:atmosphere-deploy_1 ssh_deploy -c:atmosphere-deploy_1 2 -O:atmosphere-deploy_1 fair \
+-Q:atmosphere-deploy_2 ssh_deploy -c:atmosphere-deploy_2 2 -O:atmosphere-deploy_2 fair \
+-Q:atmosphere-deploy_3 ssh_deploy -c:atmosphere-deploy_3 2 -O:atmosphere-deploy_3 fair \
+-Q:atmosphere-deploy_4 ssh_deploy -c:atmosphere-deploy_4 2 -O:atmosphere-deploy_4 fair \
+-Q:atmosphere-deploy_5 ssh_deploy -c:atmosphere-deploy_5 2 -O:atmosphere-deploy_5 fair \
+-Q:atmosphere-deploy_6 ssh_deploy -c:atmosphere-deploy_6 2 -O:atmosphere-deploy_6 fair \
+-Q:atmosphere-deploy_7 ssh_deploy -c:atmosphere-deploy_7 2 -O:atmosphere-deploy_7 fair \
+-Q:email email -c:email 3  -O:email fair \
+-Q:celery_periodic periodic -c:celery_periodic 3 -O:celery_periodic fair \
+-Q:email email -c:email 1 -O:email fair"
+
+# Atmosphere Queues/Workers (privileged)
+CELERYD_PRIVILEGED_NODES="imaging"
+CELERYD_PRIVILEGED_WORKER_OPTS="-Q:imaging imaging -c:imaging 1 -O:imaging fair"
+
+CELERYD_OPTS="\
+--app=$CELERY_APP
+--workdir=$CELERYD_CHDIR \
+--pidfile=$CELERYD_PID_FILE \
+--logfile=$CELERYD_LOG_FILE \
+--loglevel=$CELERYD_LOG_LEVEL \
+--maxtasksperchild=$CELERYD_MAX_TASKS_PER_CHILD"
+
+#Set the env properly
+export PATH="$CELERYD_CHDIR:$VIRTUALENV/bin:$VIRTUALENV/lib/python2.7/site-packages:$PATH";
+export PYTHONPATH="$CELERYD_CHDIR:$PYTHONPATH";
+export DJANGO_SETTINGS_MODULE="atmosphere.settings";
+
+SCRIPT_NAME="$(basename "$0")";
+
+usage() {
+    echo "Usage: /etc/init.d/${SCRIPT_NAME} {start|stop|status|restart}";
 }
 
-if [ -f "$CELERY_DEFAULTS" ]; then
-    _config_sanity "$CELERY_DEFAULTS"
-    echo "Using config script: $CELERY_DEFAULTS"
-    . "$CELERY_DEFAULTS"
-fi
+start() {
+    # Set upper bound on # of open files
+    ulimit -n 65536;
 
-# Sets --app argument for CELERY_BIN
-CELERY_APP_ARG=""
-if [ ! -z "$CELERY_APP" ]; then
-    CELERY_APP_ARG="--app=$CELERY_APP"
-fi
+    # Ensure existence/permissions of log/pid dir
+    local log_dir="$(dirname  "$CELERYD_LOG_FILE")" \
+          pid_dir="$(dirname "$CELERYD_PID_FILE")";
+    for dir in "$log_dir" "$pid_dir"; do
 
-CELERYD_USER=${CELERYD_USER:-$DEFAULT_USER}
+        # Create dir if it doesn't exist
+        mkdir -p "$dir";
 
-# Set CELERY_CREATE_DIRS to always create log/pid dirs.
-CELERY_CREATE_DIRS=${CELERY_CREATE_DIRS:-0}
-CELERY_CREATE_RUNDIR=$CELERY_CREATE_DIRS
-CELERY_CREATE_LOGDIR=$CELERY_CREATE_DIRS
-if [ -z "$CELERYD_PID_FILE" ]; then
-    CELERYD_PID_FILE="$DEFAULT_PID_FILE"
-    CELERY_CREATE_RUNDIR=1
-fi
-if [ -z "$CELERYD_LOG_FILE" ]; then
-    CELERYD_LOG_FILE="$DEFAULT_LOG_FILE"
-    CELERY_CREATE_LOGDIR=1
-fi
+        # Set proper dir permissions
+        chmod 2755 "$dir";
 
-CELERYD_LOG_LEVEL=${CELERYD_LOG_LEVEL:-${CELERYD_LOGLEVEL:-$DEFAULT_LOG_LEVEL}}
-CELERY_BIN=${CELERY_BIN:-"celery"}
-CELERYD_MULTI=${CELERYD_MULTI:-"$CELERY_BIN multi"}
-CELERYD_FLOWER=${CELERYD_FLOWER:-"flower"}
-CELERYD_NODES=${CELERYD_NODES:-$DEFAULT_NODES}
+        # Set proper ownwer/group for dir
+        chown "$CELERYD_USER":"$CELERYD_GROUP" "$dir";
 
-export CELERY_LOADER
+    done;
 
-if [ -n "$2" ]; then
-    CELERYD_OPTS="$CELERYD_OPTS $2"
-fi
+    # Start unprivileged workers
+    sudo -u "$CELERYD_USER" \
+        "$CELERY_BIN" multi start \
+            $CELERYD_NODES \
+            $CELERYD_WORKER_OPTS \
+            $CELERYD_OPTS;
 
-CELERYD_LOG_DIR=`dirname $CELERYD_LOG_FILE`
-CELERYD_PID_DIR=`dirname $CELERYD_PID_FILE`
-
-# Extra start-stop-daemon options, like user/group.
-if [ -n "$CELERYD_CHDIR" ]; then
-    DAEMON_OPTS="$DAEMON_OPTS --workdir=$CELERYD_CHDIR"
-fi
-###
-# Custom code written for flower
-###
-start_flower() {
-    FLOWER_PID_FILE="$CELERYD_PID_DIR/flower.pid"
-    if [ -f "$FLOWER_PID_FILE" ]; then
-        echo "Pidfile exists for flower: $FLOWER_PID_FILE"
-        return
-    fi
-    #Start a new one
-    echo $CELERYD_FLOWER $CELERY_FLOWER_OPTS
-    $CELERYD_FLOWER $CELERY_FLOWER_OPTS &
-    FLOWER_PID=$!
-    echo $FLOWER_PID > $FLOWER_PID_FILE
-    echo "Flower (pid $FLOWER_PID) is running..."
+    # Start privileged (root) workers
+    C_FORCE_ROOT=1 "$CELERY_BIN" multi start \
+        $CELERYD_PRIVILEGED_NODES \
+        $CELERYD_PRIVILEGED_WORKER_OPTS \
+        $CELERYD_OPTS;
 }
-kill_flower() {
-    echo "Killing flower processes..."
-    FLOWER_PID_FILE="$CELERYD_PID_DIR/flower.pid"
-    if [ -f "$FLOWER_PID_FILE" ]; then
-        echo "Pidfile found for flower: $FLOWER_PID_FILE"
-        FLOWER_PID=`cat "$FLOWER_PID_FILE"`
+
+stop() {
+
+    local nodes="$CELERYD_NODES $CELERYD_PRIVILEGED_NODES";
+
+    # Wait for nodes to die
+    "$CELERY_BIN" multi stop $nodes \
+        --pidfile="$CELERYD_PID_FILE";
+}
+
+status() {
+    local pid_dir="$(dirname $CELERYD_PID_FILE)";
+    local stopped running;
+    local pid_file pid;
+    for node in $CELERYD_NODES $CELERYD_PRIVILEGED_NODES; do
+        pid_file="${pid_dir}/${node}.pid";
+
+        # If the pid file doesn't exist
+        if [ ! -e $pid_file ]; then
+            stopped="$stopped $node";
+            continue;
+        fi;
+
+        # Confirm that the process is running
+        pid="$(cat "$pid_file")";
+        if kill -0 "$pid" 2>/dev/null; then
+            # Add the running pid to our list
+            running="$running $node";
+        else
+            # Add the stopped pid to our list
+            stopped="$stopped $node";
+        fi;
+    done;
+
+    if [ -z "$running"  ]; then
+        echo "$SCRIPT_NAME is stopped.";
+    elif [ -z "$stopped"  ]; then
+        echo "$SCRIPT_NAME is running.";
     else
-        echo "pid file missing (Is it running?). Searching for flower.."
-        FLOWER_PID=`ps aux | grep -v 'grep' | grep 'celery flower' | awk '{print $2}'`
-    fi
-    if [ -z "$FLOWER_PID" ] ; then
-        echo "Flower is not running."
-    elif kill -9 "$FLOWER_PID" > /dev/null 2>&1; then
-        echo "Killed running flower PID: $FLOWER_PID"
-    fi
-    #File cleanup
-    if [ -f "$FLOWER_PID_FILE" ]; then
-        echo "Cleaning up stale pid: $FLOWER_PID_FILE"
-        rm $FLOWER_PID_FILE
-    fi
+        echo "Some of the nodes are running, some are stopped. Restart recommended.";
+        echo "Running: ${running}";
+        echo "Stopped: ${stopped}";
+        return 1;
+    fi;
 }
-
-
-
-check_dev_null() {
-    if [ ! -c /dev/null ]; then
-        echo "/dev/null is not a character device!"
-        exit 75  # EX_TEMPFAIL
-    fi
-}
-
-
-maybe_die() {
-    if [ $? -ne 0 ]; then
-        echo "Exiting: $* (errno $?)"
-        exit 77  # EX_NOPERM
-    fi
-}
-
-create_default_dir() {
-    if [ ! -d "$1" ]; then
-        echo "- Creating default directory: '$1'"
-        mkdir -p "$1"
-        maybe_die "Couldn't create directory $1"
-        echo "- Changing permissions of '$1' to 02755"
-        chmod 02755 "$1"
-        maybe_die "Couldn't change permissions for $1"
-        if [ -n "$CELERYD_USER" ]; then
-            echo "- Changing owner of '$1' to '$CELERYD_USER'"
-            chown "$CELERYD_USER" "$1"
-            maybe_die "Couldn't change owner of $1"
-        fi
-        if [ -n "$CELERYD_GROUP" ]; then
-            echo "- Changing group of '$1' to '$CELERYD_GROUP'"
-            chgrp "$CELERYD_GROUP" "$1"
-            maybe_die "Couldn't change group of $1"
-        fi
-    fi
-}
-
-
-check_paths() {
-    if [ $CELERY_CREATE_LOGDIR -eq 1 ]; then
-        create_default_dir "$CELERYD_LOG_DIR"
-    fi
-    if [ $CELERY_CREATE_RUNDIR -eq 1 ]; then
-        create_default_dir "$CELERYD_PID_DIR"
-    fi
-}
-
-create_paths() {
-    create_default_dir "$CELERYD_LOG_DIR"
-    create_default_dir "$CELERYD_PID_DIR"
-}
-
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
-
-
-_get_pids() {
-    found_pids=0
-    my_exitcode=0
-
-    for pid_file in "$CELERYD_PID_DIR"/*.pid; do
-        local pid=`cat "$pid_file"`
-        local cleaned_pid=`echo "$pid" | sed -e 's/[^0-9]//g'`
-        if [ -z "$pid" ] || [ "$cleaned_pid" != "$pid" ]; then
-            echo "bad pid file ($pid_file)"
-            one_failed=true
-            my_exitcode=1
-        else
-            found_pids=1
-            echo "$pid"
-        fi
-
-    if [ $found_pids -eq 0 ]; then
-        echo "${SCRIPT_NAME}: All nodes down"
-        exit $my_exitcode
-    fi
-    done
-}
-
-
-_chuid () {
-    su "$CELERYD_USER" -c "$CELERYD_MULTI $*"
-}
-
-
-start_workers () {
-    if [ ! -z "$CELERYD_ULIMIT" ]; then
-        ulimit $CELERYD_ULIMIT
-    fi
-    echo su "$CELERYD_USER" -c "$CELERYD_MULTI" $* start $CELERYD_NODES $DAEMON_OPTS --pidfile="$CELERYD_PID_FILE" --logfile="$CELERYD_LOG_FILE" --loglevel="$CELERYD_LOG_LEVEL" $CELERY_APP_ARG $CELERYD_OPTS
-    _chuid $* start $CELERYD_NODES $DAEMON_OPTS     \
-                 --pidfile="$CELERYD_PID_FILE"      \
-                 --logfile="$CELERYD_LOG_FILE"      \
-                 --loglevel="$CELERYD_LOG_LEVEL"    \
-                 $CELERY_APP_ARG                    \
-                 $CELERYD_OPTS
-}
-
-
-dryrun () {
-    (C_FAKEFORK=1 start_workers --verbose)
-}
-
-
-stop_workers () {
-    _chuid stopwait $CELERYD_NODES --pidfile="$CELERYD_PID_FILE"
-}
-
-
-restart_workers () {
-    _chuid restart $CELERYD_NODES $DAEMON_OPTS      \
-                   --pidfile="$CELERYD_PID_FILE"    \
-                   --logfile="$CELERYD_LOG_FILE"    \
-                   --maxtasksperchild="$CELERYD_MAX_TASKS_PER_CHILD"          \
-                   --loglevel="$CELERYD_LOG_LEVEL"  \
-                   $CELERY_APP_ARG                  \
-                   $CELERYD_OPTS
-}
-
-
-kill_workers() {
-    _chuid kill $CELERYD_NODES --pidfile="$CELERYD_PID_FILE"
-}
-
-
-restart_workers_graceful () {
-    local worker_pids=
-    worker_pids=`_get_pids`
-    [ "$one_failed" ] && exit 1
-
-    for worker_pid in $worker_pids; do
-        local failed=
-        kill -HUP $worker_pid 2> /dev/null || failed=true
-        if [ "$failed" ]; then
-            echo "${SCRIPT_NAME} worker (pid $worker_pid) could not be restarted"
-            one_failed=true
-        else
-            echo "${SCRIPT_NAME} worker (pid $worker_pid) received SIGHUP"
-        fi
-    done
-
-    [ "$one_failed" ] && exit 1 || exit 0
-}
-
-
-check_status () {
-    my_exitcode=0
-    found_pids=0
-
-    local one_failed=
-    for pid_file in "$CELERYD_PID_DIR"/*.pid; do
-        if [ ! -r $pid_file ]; then
-            echo "${SCRIPT_NAME} is stopped: no pids were found"
-            one_failed=true
-            break
-        fi
-
-        local node=`basename "$pid_file" .pid`
-        local pid=`cat "$pid_file"`
-        local cleaned_pid=`echo "$pid" | sed -e 's/[^0-9]//g'`
-        if [ -z "$pid" ] || [ "$cleaned_pid" != "$pid" ]; then
-            echo "bad pid file ($pid_file)"
-            one_failed=true
-        else
-            local failed=
-            kill -0 $pid 2> /dev/null || failed=true
-            if [ "$failed" ]; then
-                echo "${SCRIPT_NAME} (node $node) (pid $pid) is stopped, but pid file exists!"
-                one_failed=true
-            else
-                echo "${SCRIPT_NAME} (node $node) (pid $pid) is running..."
-            fi
-        fi
-    done
-
-    [ "$one_failed" ] && exit 1 || exit 0
-}
-
 
 case "$1" in
-    flower-start)
-        check_dev_null
-        check_paths
-        start_flower
-    ;;
+    start) start; ;;
 
-    flower-stop)
-        check_dev_null
-        check_paths
-        kill_flower
-    ;;
+    stop) stop; ;;
 
-    flower-restart)
-        check_dev_null
-        check_paths
-        kill_flower
-        start_flower
-    ;;
+    status) status; ;;
 
-    safe-stop)
-        check_dev_null
-        check_paths
-        stop_workers
-    ;;
+    restart) stop; start; ;;
 
-    safe-start)
-        check_dev_null
-        check_paths
-        start_workers
-    ;;
-
-    start)
-        check_dev_null
-        check_paths
-        start_flower
-        start_workers
-        #kill_flower
-    ;;
-
-    stop)
-        check_dev_null
-        check_paths
-        stop_workers
-        kill_flower
-    ;;
-
-    reload|force-reload)
-        echo "Use restart"
-    ;;
-
-    status)
-        check_status
-    ;;
-
-    restart)
-        check_dev_null
-        check_paths
-        restart_workers
-        #kill_flower
-        #start_flower
-    ;;
-
-    graceful)
-        check_dev_null
-        restart_workers_graceful
-    ;;
-
-    kill)
-        check_dev_null
-        kill_workers
-        kill_flower
-    ;;
-
-    dryrun)
-        check_dev_null
-        dryrun
-    ;;
-
-    try-restart)
-        check_dev_null
-        check_paths
-        restart_workers
-    ;;
-
-    create-paths)
-        check_dev_null
-        create_paths
-    ;;
-
-    check-paths)
-        check_dev_null
-        check_paths
-    ;;
-
-    *)
-        echo "Usage: /etc/init.d/${SCRIPT_NAME} {start|stop|restart|graceful|kill|dryrun|create-paths}"
-        exit 64  # EX_USAGE
-    ;;
+    *) usage; ;;
 esac
 
-exit 0
+exit $?;
