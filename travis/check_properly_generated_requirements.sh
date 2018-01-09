@@ -11,7 +11,7 @@
 # This script properly generates the requirements and performs a diff with the
 # current requirements.
 
-PIP_TOOLS_VERSION=1.11.0
+PIP_TOOLS_VERSION=1.11.1
 
 function main {
 
