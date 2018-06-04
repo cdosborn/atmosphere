@@ -48,14 +48,14 @@ def check_volume_task(driverCls, provider, identity,
         playbooks = deploy_check_volume(
             instance.ip, username, instance.id,
             device_location, device_type=device_type)
-        celery_logger.info(playbooks.__dict__)
+        celery_logger.info(playbooks)
         hostname = build_host_name(instance.id, instance.ip)
         result = False if execution_has_failures(playbooks, hostname)\
             or execution_has_unreachable(playbooks, hostname) else True
         if not result:
             raise Exception(
                 "Error encountered while checking volume for filesystem: %s"
-                % playbooks.stats.summarize(host=hostname))
+                % playbooks)
         return result
     except Exception as exc:
         celery_logger.warn(exc)
@@ -96,7 +96,7 @@ def unmount_volume_task(driverCls, provider, identity, instance_id, volume_id,
         if not result:
             raise Exception(
                 "Error encountered while unmounting volume: %s"
-                % playbooks.stats.summarize(host=hostname))
+                % playbooks)
         return device_location
     except Exception as exc:
         celery_logger.warn(exc)
@@ -137,14 +137,14 @@ def mount_volume_task(driverCls, provider, identity, instance_id, volume_id,
         playbooks = deploy_mount_volume(
             instance.ip, username, instance.id,
             device_location, mount_location=mount_location, device_type=device_type)
-        celery_logger.info(playbooks.__dict__)
+        celery_logger.info(playbooks)
         hostname = build_host_name(instance.id, instance.ip)
         result = False if execution_has_failures(playbooks, hostname)\
             or execution_has_unreachable(playbooks, hostname) else True
         if not result:
             raise Exception(
                 "Error encountered while mounting volume: %s"
-                % playbooks.stats.summarize(host=hostname))
+                % playbooks)
         return mount_location
     except Exception as exc:
         celery_logger.warn(exc)
