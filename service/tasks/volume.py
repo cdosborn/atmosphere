@@ -47,12 +47,12 @@ def check_volume_task(driverCls, provider, identity,
         playbook_results = deploy_check_volume(
             instance.ip, username, instance.id,
             device_location, device_type=device_type)
-        result = False if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results) else True
-        if not result:
+        success = not (execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results))
+        if not success:
             raise Exception(
                 "Error encountered while checking volume for filesystem: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
             )
-        return result
+        return success
     except Exception as exc:
         celery_logger.warn(exc)
         check_volume_task.retry(exc=exc)
@@ -86,8 +86,7 @@ def unmount_volume_task(driverCls, provider, identity, instance_id, volume_id,
         except DeviceBusyException:
             # Future-Fixme: Update VolumeStatusHistory.extra, set status to 'unmount_failed'
             raise
-        result = False if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results) else True
-        if not result:
+        if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results):
             raise Exception(
                 "Error encountered while unmounting volume: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
             )
@@ -132,8 +131,7 @@ def mount_volume_task(driverCls, provider, identity, instance_id, volume_id,
             instance.ip, username, instance.id,
             device_location, mount_location=mount_location, device_type=device_type)
         celery_logger.info(playbook_results)
-        result = False if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results) else True
-        if not result:
+        if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results):
             raise Exception(
                 "Error encountered while mounting volume: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
             )

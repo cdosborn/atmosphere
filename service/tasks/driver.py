@@ -982,14 +982,14 @@ def check_web_desktop_task(driverCls, provider, identity,
         if retry_count > 2:
             should_raise = False
         playbook_results = run_utility_playbooks(instance.ip, username, instance_alias, ["atmo_check_novnc.yml"], raise_exception=should_raise)
-        result = False if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results)  else True
+        desktop_enabled = not (execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results))
 
         # NOTE: Throws Instance.DoesNotExist
         core_instance = Instance.objects.get(provider_alias=instance_alias)
-        core_instance.web_desktop = result
+        core_instance.web_desktop = desktop_enabled
         core_instance.save()
         celery_logger.debug("check_web_desktop_task finished at %s." % datetime.now())
-        return result
+        return desktop_enabled
     except AnsibleDeployException as exc:
         check_web_desktop_task.retry(exc=exc)
     except Instance.DoesNotExist:
@@ -1044,14 +1044,14 @@ def check_process_task(driverCls, provider, identity,
         # USE ANSIBLE
         username = identity.user.username
         playbook_results = run_utility_playbooks(instance.ip, username, instance_alias, ["atmo_check_vnc.yml"], raise_exception=False)
-        result = False if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results)  else True
+        vnc_enabled = not (execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results))
 
         # NOTE: Throws Instance.DoesNotExist
         core_instance = Instance.objects.get(provider_alias=instance_alias)
-        core_instance.vnc = result
+        core_instance.vnc = vnc_enabled
         core_instance.save()
         celery_logger.debug("check_process_task finished at %s." % datetime.now())
-        return result
+        return vnc_enabled
     except AnsibleDeployException as exc:
         check_process_task.retry(exc=exc)
     except Instance.DoesNotExist:
