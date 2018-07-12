@@ -50,7 +50,7 @@ def check_volume_task(driverCls, provider, identity,
         success = not (execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results))
         if not success:
             raise Exception(
-                "Error encountered while checking volume for filesystem: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
+                "Error encountered while checking volume for filesystem: instance_id: {}, volume_id: {}".format(instance_id, volume_id)
             )
         return success
     except Exception as exc:
@@ -88,7 +88,7 @@ def unmount_volume_task(driverCls, provider, identity, instance_id, volume_id,
             raise
         if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results):
             raise Exception(
-                "Error encountered while unmounting volume: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
+                "Error encountered while unmounting volume: instance_id: {}, volume_id: {}".format(instance_id, volume_id)
             )
         return device_location
     except Exception as exc:
@@ -133,7 +133,7 @@ def mount_volume_task(driverCls, provider, identity, instance_id, volume_id,
         celery_logger.info(playbook_results)
         if execution_has_failures(playbook_results) or execution_has_unreachable(playbook_results):
             raise Exception(
-                "Error encountered while mounting volume: instance_id: {0}, volume_id: {1}".format(instance_id, volume_id)
+                "Error encountered while mounting volume: instance_id: {}, volume_id: {}".format(instance_id, volume_id)
             )
         return mount_location
     except Exception as exc:
