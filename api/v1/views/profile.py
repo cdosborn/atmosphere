@@ -8,7 +8,7 @@ from rest_framework import status
 from django.utils import timezone
 from core.exceptions import InvalidUser
 from api.v1.views.base import AuthAPIView
-from api.v1.serializers import ProfileSerializer, AtmoUserSerializer
+from api.v1.serializers import ProfileSerializer
 from core.models.user import create_new_accounts
 
 
