@@ -181,7 +181,7 @@ class AtmosphereUser(AbstractBaseUser, PermissionsMixin):
 # Save Hooks Here:
 
 
-def get_or_create_user_profile(sender, instance, created, **kwargs):
+def get_or_create_user_profile(instance, created, **kwargs):
     from core.models.profile import UserProfile
     try:
         prof = UserProfile.objects.filter(user=instance).distinct().get()
