@@ -1,6 +1,7 @@
 from django.db.models import Q
 from threepio import logger
 
+from jetstream.tasks import fill_user_allocation_sources_for_task
 from jetstream.exceptions import TASAPIException, NoTaccUserForXsedeException, NoAccountForUsernameException
 from atmosphere.plugins.auth.validation import ValidationPlugin
 from core.models import UserAllocationSource
@@ -21,7 +22,7 @@ class XsedeProjectRequired(ValidationPlugin):
             if not project_allocations:
                 return False
             return True
-        except (NoTaccUserForXsedeException, NoAccountForUsernameException) as e:
+        except (NoTaccUserForXsedeException, NoAccountForUsernameException):
             logger.exception('User is invalid: %s', user)
             return False
         except TASAPIException:
