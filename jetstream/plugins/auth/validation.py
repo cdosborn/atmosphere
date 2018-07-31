@@ -28,5 +28,5 @@ class XsedeProjectRequired(ValidationPlugin):
             logger.exception('Some other error happened while trying to validate user: %s', user)
             active_allocation_count = UserAllocationSource.objects.filter(
                 only_current_user_allocations() & Q(user=user)).count()
-            logger.debug('user: %s, active_allocation_count: %d', active_allocation_count, user)
+            logger.debug('user: %s, active_allocation_count: %d', user, active_allocation_count)
             return active_allocation_count > 0
