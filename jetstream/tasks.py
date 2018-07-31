@@ -9,7 +9,9 @@ from core.models.allocation_source import (
     AllocationSource, UserAllocationSnapshot
 )
 from core.models.allocation_source import total_usage
-from .allocation import (TASAPIDriver, fill_user_allocation_sources, select_valid_allocation)
+from .allocation import (TASAPIDriver, fill_user_allocation_sources,
+                         fill_user_allocation_source_for,
+                         select_valid_allocation)
 from .exceptions import TASPluginException
 from .models import TASAllocationReport
 
@@ -23,6 +25,16 @@ def monitor_jetstream_allocation_sources():
     Adds each new source (And user association) to the DB.
     """
     resources = fill_user_allocation_sources()
+    return resources
+
+@task(name="fill_user_allocation_sources_for_task")
+def fill_user_allocation_sources_for_task(username):
+    """
+    Queries the TACC API for Jetstream allocation sources for a given user
+    """
+    driver = TASAPIDriver()
+    user = AtmosphereUser.objects.get(username=username)
+    resources = fill_user_allocation_source_for(driver, user)
     return resources
 
 
