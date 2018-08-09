@@ -48,6 +48,17 @@ def only_current_tokens(now_time=None):
         Q(issuedTime__lt=now_time)
 
 
+def only_current_access_tokens(now_time=None):
+    """
+    Filters out inactive tokens.
+    """
+    if not now_time:
+        now_time = timezone.now()
+    return (Q(token__expireTime__isnull=True) |
+            Q(token__expireTime__gt=now_time)) &\
+        Q(token__issuedTime__lt=now_time)
+
+
 def only_current_provider(now_time=None):
     """
     Use this query on core.Identity:
