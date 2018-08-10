@@ -41,6 +41,7 @@ class AccessTokenViewSet(AuthModelViewSet):
         json_response = {
             'token': access_token.token_id,
             'expireTime': expireTime.strftime("%b %d, %Y %H:%M:%S"),
+            'id': access_token.id,
             'name': name
         }
         return Response(json_response, status=status.HTTP_201_CREATED)
