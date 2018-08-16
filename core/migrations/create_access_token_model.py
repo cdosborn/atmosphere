@@ -14,6 +14,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.DeleteModel(
+            name='AccessToken',
+        ),
         migrations.CreateModel(
             name='AccessToken',
             fields=[
