@@ -1,9 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
-from django_cyverse_auth.models import Token, get_or_create_token
+from django_cyverse_auth.models import Token
 
-from datetime import timedelta
 
 class AccessToken(models.Model):
     """
@@ -17,9 +16,7 @@ class AccessToken(models.Model):
         app_label = "core"
 
 def create_access_token(user, token_name=None, token_expire=None, remote_ip=None, issuer=None):
-    if not token_expire:
-        token_expire = timezone.now() + timedelta(days=365*5)
-
-    token = get_or_create_token(user, None, token_expire, remote_ip, issuer)
+    token = Token(user=user)
+    token.save()
     access_token, created = AccessToken.objects.update_or_create(token=token, name=token_name)
     return access_token

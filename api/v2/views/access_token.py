@@ -37,10 +37,8 @@ class AccessTokenViewSet(AuthModelViewSet):
 
         user = AtmosphereUser.objects.get(id=atmo_user)
         access_token = create_access_token(user, name, issuer=issuer_backend)
-        expireTime = access_token.token.expireTime
         json_response = {
             'token': access_token.token_id,
-            'expireTime': expireTime.strftime("%b %d, %Y %H:%M:%S"),
             'id': access_token.id,
             'name': name
         }
