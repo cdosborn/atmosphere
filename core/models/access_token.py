@@ -16,7 +16,7 @@ class AccessToken(models.Model):
         app_label = "core"
 
 def create_access_token(user, token_name=None, token_expire=None, remote_ip=None, issuer=None):
-    token = Token(user=user)
+    token = Token(user=user, issuer=issuer)
     token.save()
     access_token, created = AccessToken.objects.update_or_create(token=token, name=token_name)
     return access_token
