@@ -31,11 +31,7 @@ class AccessTokenViewSet(AuthModelViewSet):
         issuer_backend = request.session.get('_auth_user_backend', '').split('.')[-1]
         data = request.data
         name = data.get('name', None)
-        atmo_user = data.get('atmo_user', None)
-        if not atmo_user:
-            return invalid_auth("atmo_user missing")
-
-        user = AtmosphereUser.objects.get(id=atmo_user)
+        user = request.user
         access_token = create_access_token(user, name, issuer=issuer_backend)
         json_response = {
             'token': access_token.token_id,
