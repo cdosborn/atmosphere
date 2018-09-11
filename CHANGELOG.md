@@ -26,10 +26,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased](https://github.com/cyverse/atmosphere/compare/v33-0...HEAD) - YYYY-MM-DD
 ### Changed
+  - Simplified v2 instance action api to exclude 'object' field
+    ([#655](https://github.com/cyverse/atmosphere/pull/655))
   - Increased hard timeouts for tasks
     ([#650](https://github.com/cyverse/atmosphere/pull/650))
   - Variable changes to DJANGO_DEBUG and SEND_EMAILS
     ([#649](https://github.com/cyverse/atmosphere/pull/649))
+
+### Fixed
+  - Fixed v2 volume detach throwing 500 serialization error
+    ([#655](https://github.com/cyverse/atmosphere/pull/655))
 
 ### Added
   - Add ability to configure allocation overrides
