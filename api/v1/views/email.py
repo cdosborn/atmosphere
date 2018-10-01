@@ -43,12 +43,8 @@ class Feedback(AuthAPIView):
         """
         user = User.objects.get(username=username)
         subject = 'Subject: Atmosphere Client Feedback from %s' % username
-        context = {
-            "user": user,
-            "feedback": message
-        }
-        body = render_to_string("core/email/feedback.html",
-                                context=context)
+        context = {"user": user, "feedback": message}
+        body = render_to_string("core/email/feedback.html", context=context)
         email_success = email_support(subject, body, request)
         if email_success:
             resp = {

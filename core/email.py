@@ -181,9 +181,12 @@ def email_support(subject, body, request):
     Send a basic email to support.
     """
     user, user_email, user_name = lookup_user(request)
-    celery_task = send_email.si(subject, body,
-               from_email=email_address_str(user_name, user_email),
-               to=[email_address_str(*settings.ATMO_SUPPORT)])
+    celery_task = send_email.si(
+        subject,
+        body,
+        from_email=email_address_str(user_name, user_email),
+        to=[email_address_str(*settings.ATMO_SUPPORT)]
+    )
     celery_task.delay()
     return True
 
@@ -192,9 +195,12 @@ def email_admin(subject, body, sender):
     """
     Send a basic email to the admins.
     """
-    celery_task = send_email.si(subject, body,
-               from_email=sender,
-               to=[email_address_str(name, email) for name, email in settings.ADMINS])
+    celery_task = send_email.si(
+        subject,
+        body,
+        from_email=sender,
+        to=[email_address_str(name, email) for name, email in settings.ADMINS]
+    )
     celery_task.delay()
     return True
 
@@ -208,12 +214,15 @@ def email_from_admin(username, subject, body, html=False):
     user_email = lookupEmail(username)
     if not user_email:
         user_email = "%s@%s" % (username, settings.DEFAULT_EMAIL_DOMAIN)
-    celery_task = send_email.si(subject, body,
-               from_email=sender,
-               to=[email_address_str(username, user_email)],
-               cc=[sender],
-               html=html)
-    celery_task.delay() # Task executes here
+    celery_task = send_email.si(
+        subject,
+        body,
+        from_email=sender,
+        to=[email_address_str(username, user_email)],
+        cc=[sender],
+        html=html
+    )
+    celery_task.delay()    # Task executes here
     return True
 
 
@@ -417,8 +426,7 @@ def send_deploy_failed_email(core_instance, exception_str):
         "identifier": core_instance.source.providermachine.identifier,
         "error": exception_str
     }
-    body = render_to_string("core/email/deploy_failed.html",
-                            context=context)
+    body = render_to_string("core/email/deploy_failed.html", context=context)
     subject = '(%s) Deploy Failed' % username
     return email_admin(subject, body, email_address_str(user_name, user_email))
 
@@ -444,7 +452,9 @@ def send_image_request_failed_email(machine_request, exception_str):
     }
     body = render_to_string("core/email/imaging_failed.html", context=context)
     subject = 'ERROR - Atmosphere Imaging Task has encountered an exception'
-    return email_admin(subject, body, email_address_str(user.username, user_email))
+    return email_admin(
+        subject, body, email_address_str(user.username, user_email)
+    )
 
 
 def send_image_request_email(user, new_machine, name):
@@ -520,8 +530,9 @@ def requestImaging(request, machine_request_id, auto_approve=False):
         context["view"] = base_url
         context["approve"] = "%s/approve" % base_url
         context["deny"] = "%s/deny" % base_url
-        staff_body = render_to_string("core/email/imaging_request_staff.html",
-                                      context=context)
+        staff_body = render_to_string(
+            "core/email/imaging_request_staff.html", context=context
+        )
         email_support(subject, staff_body, request)
 
     return email_from_admin(user.username, subject, body)
