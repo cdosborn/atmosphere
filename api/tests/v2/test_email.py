@@ -27,14 +27,18 @@ class VolumeEmailTests(TestCase):
 
     def test_volume_support_email(self):
         force_authenticate(self.request, user=UserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_called_once()
             self.assertEquals(response.status_code, 200)
 
     def test_anonymous_volume_support_email(self):
         force_authenticate(self.request, user=AnonymousUserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_not_called()
             self.assertEquals(response.status_code, 403)
@@ -54,14 +58,18 @@ class InstanceEmailTests(TestCase):
 
     def test_instance_support_email(self):
         force_authenticate(self.request, user=UserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_called_once()
             self.assertEquals(response.status_code, 200)
 
     def test_anonymous_instance_support_email(self):
         force_authenticate(self.request, user=AnonymousUserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_not_called()
             self.assertEquals(response.status_code, 403)
@@ -79,14 +87,18 @@ class FeedbackEmailTests(TestCase):
 
     def test_feedback_email(self):
         force_authenticate(self.request, user=UserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_called_once()
             self.assertEquals(response.status_code, 200)
 
     def test_anonymous_feedback_email(self):
         force_authenticate(self.request, user=AnonymousUserFactory())
-        with mock.patch("api.v2.views.email.email_support") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.email_support"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_not_called()
             self.assertEquals(response.status_code, 403)
@@ -105,14 +117,18 @@ class ResourceEmailTests(TestCase):
 
     def test_resource_email(self):
         force_authenticate(self.request, user=UserFactory())
-        with mock.patch("api.v2.views.email.resource_request_email") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.resource_request_email"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_called_once()
             self.assertEquals(response.status_code, 200)
 
     def test_anonymous_resource_email(self):
         force_authenticate(self.request, user=AnonymousUserFactory())
-        with mock.patch("api.v2.views.email.resource_request_email") as mock_email_support:
+        with mock.patch(
+            "api.v2.views.email.resource_request_email"
+        ) as mock_email_support:
             response = self.view(self.request)
             mock_email_support.assert_not_called()
             self.assertEquals(response.status_code, 403)
